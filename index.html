@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sight Word Test</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0f; --surface:#13131a; --surface2:#1c1c28;
+    --accent:#6c63ff; --accent2:#ff6584;
+    --green:#22d3a0; --red:#ff5b7a;
+    --text:#f0f0f8; --muted:#6b6b8a;
+    --border:rgba(255,255,255,0.07);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Plus Jakarta Sans',sans-serif;
+    background:var(--bg); color:var(--text);
+    min-height:100vh; overflow-x:hidden;
+  }
+
+  .screen { display:none; }
+  .screen.active { display:flex; }
+
+  /* shared bg glow */
+  .app-bg {
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 20%,rgba(108,99,255,.12) 0%,transparent 60%),
+      radial-gradient(ellipse 50% 40% at 80% 80%,rgba(255,101,132,.08) 0%,transparent 60%);
+  }
+
+  /* ── START ── */
+  #startScreen {
+    min-height:100vh; align-items:center; justify-content:center; position:relative;
+  }
+  .card {
+    position:relative; z-index:1;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:28px; box-shadow:0 40px 80px rgba(0,0,0,.5);
+    width:92%; max-width:460px; margin:auto;
+    padding:44px 36px; text-align:center;
+    animation:fadeUp .4s cubic-bezier(.34,1.4,.64,1);
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:none} }
+
+  .badge {
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(255,101,132,.12); border:1px solid rgba(255,101,132,.3);
+    border-radius:100px; padding:6px 16px;
+    font-size:12px; font-weight:500; letter-spacing:.08em; text-transform:uppercase;
+    color:#ffb3c1; margin-bottom:24px;
+  }
+  .dot { width:7px; height:7px; background:var(--accent2); border-radius:50%; display:inline-block; }
+  .big-title {
+    font-size:clamp(36px,8vw,52px); font-weight:800; line-height:1.05;
+    background:linear-gradient(135deg,#f0f0f8 30%,#ffb3c1);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    margin-bottom:8px;
+  }
+  .sub { font-size:14px; color:var(--muted); line-height:1.6; margin-bottom:28px; }
+  .chips { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:28px; }
+  .chip { background:var(--surface2); border:1px solid var(--border); padding:5px 14px; border-radius:100px; font-size:12px; font-weight:500; }
+
+  label.lbl { display:block; text-align:left; font-size:12px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  input.name-input {
+    width:100%; padding:14px 18px;
+    background:var(--surface2); border:1.5px solid var(--border);
+    border-radius:14px; color:var(--text);
+    font-family:'Plus Jakarta Sans',sans-serif; font-size:18px; font-weight:600;
+    outline:none; margin-bottom:20px; transition:border-color .2s;
+  }
+  input.name-input::placeholder { color:var(--muted); font-weight:400; }
+  input.name-input:focus { border-color:rgba(255,101,132,.5); }
+
+  .btn-primary {
+    width:100%; padding:17px; background:var(--accent2); color:#fff;
+    font-family:'Plus Jakarta Sans',sans-serif; font-size:17px; font-weight:700;
+    border:none; border-radius:16px; cursor:pointer;
+    box-shadow:0 8px 32px rgba(255,101,132,.35);
+    transition:transform .15s, box-shadow .15s, opacity .15s; margin-bottom:12px;
+  }
+  .btn-primary:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 12px 40px rgba(255,101,132,.5); }
+  .btn-primary:disabled { opacity:.35; cursor:not-allowed; }
+  .btn-ghost {
+    width:100%; padding:14px; background:var(--surface2); color:var(--muted);
+    font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:600;
+    border:1px solid var(--border); border-radius:14px; cursor:pointer;
+    transition:color .2s, border-color .2s;
+  }
+  .btn-ghost:hover { color:var(--text); border-color:rgba(255,255,255,.2); }
+
+  /* ── GAME ── */
+  #gameScreen {
+    min-height:100vh; min-height:100dvh;
+    align-items:stretch; justify-content:stretch; position:relative;
+  }
+  .game-wrap {
+    position:relative; z-index:1;
+    width:100%; max-width:560px; margin:0 auto;
+    padding:16px 20px; display:flex; flex-direction:column; gap:12px;
+    height:100vh; height:100dvh;
+  }
+  .game-header { display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  .name-tag { font-size:13px; font-weight:600; color:var(--muted); }
+  .name-tag span { color:var(--text); }
+  .prog-tag { font-size:13px; font-weight:700; color:var(--muted); }
+  .prog-tag span { color:var(--text); }
+  .stats-row { display:flex; gap:12px; flex-shrink:0; }
+  .stat-pill { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:10px 12px; text-align:center; }
+  .stat-pill .lbl2 { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .stat-pill .val { font-size:26px; font-weight:800; }
+  .val-c { color:var(--green); } .val-m { color:var(--red); }
+  .prog-bar-wrap { height:4px; background:var(--surface2); border-radius:100px; overflow:hidden; flex-shrink:0; }
+  .prog-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent2),var(--accent)); border-radius:100px; transition:width .3s; }
+
+  .word-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:28px; flex:1; min-height:0;
+    display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.4);
+  }
+  .word-card::before {
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(ellipse 80% 60% at 50% 30%,rgba(255,101,132,.05) 0%,transparent 70%);
+  }
+  .word-display { font-size:clamp(64px,14vw,100px); font-weight:800; letter-spacing:-.02em; position:relative; z-index:1; }
+  .word-in { animation:wordIn .25s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes wordIn { from{opacity:0;transform:scale(.8) translateY(10px)} to{opacity:1;transform:none} }
+
+  .flash-overlay { position:absolute; inset:0; border-radius:28px; pointer-events:none; opacity:0; }
+  .flash-green { background:rgba(34,211,160,.15); border:2px solid var(--green); animation:fo .35s forwards; }
+  .flash-red   { background:rgba(255,91,122,.15);  border:2px solid var(--red);   animation:fo .35s forwards; }
+  @keyframes fo { 0%{opacity:1} 100%{opacity:0} }
+
+  .action-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; flex-shrink:0; padding-bottom:env(safe-area-inset-bottom,8px); }
+  .btn-act {
+    padding:22px; border:none; border-radius:20px; font-size:28px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .btn-act:active { transform:scale(.96); }
+  .btn-act:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-ok { background:rgba(34,211,160,.12); border:1.5px solid rgba(34,211,160,.35); color:var(--green); }
+  .btn-ok:hover:not(:disabled) { background:rgba(34,211,160,.2); transform:translateY(-3px); box-shadow:0 8px 24px rgba(34,211,160,.2); }
+  .btn-no { background:rgba(255,91,122,.1); border:1.5px solid rgba(255,91,122,.3); color:var(--red); }
+  .btn-no:hover:not(:disabled) { background:rgba(255,91,122,.18); transform:translateY(-3px); box-shadow:0 8px 24px rgba(255,91,122,.2); }
+
+  /* ── RESULTS ── */
+  #resultsScreen {
+    min-height:100vh; align-items:flex-start; justify-content:center;
+    overflow-y:auto; padding:24px 0; position:relative;
+  }
+  .results-card {
+    position:relative; z-index:1;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:28px; box-shadow:0 40px 80px rgba(0,0,0,.5);
+    width:92%; max-width:520px; margin:auto;
+    padding:36px 28px; text-align:center;
+    animation:fadeUp .5s cubic-bezier(.34,1.4,.64,1);
+  }
+  .r-emoji { font-size:48px; margin-bottom:8px; }
+  .r-name { font-size:12px; font-weight:600; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+  .r-title { font-size:28px; font-weight:800; margin-bottom:2px; }
+  .r-sub { font-size:13px; color:var(--muted); margin-bottom:20px; }
+  .score-big {
+    font-size:72px; font-weight:800; line-height:1;
+    background:linear-gradient(135deg,var(--green),var(--accent));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    margin-bottom:4px;
+  }
+  .score-lbl { font-size:12px; color:var(--muted); margin-bottom:20px; }
+  .res-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+  .res-box { background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:12px 8px; }
+  .res-box .rl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; }
+  .res-box .rv { font-size:24px; font-weight:800; }
+
+  /* sheet table */
+  .breakdown { text-align:left; background:var(--surface2); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:20px; }
+  .bd-title { font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:14px; }
+  .sheet-table { display:grid; grid-template-columns:repeat(3,1fr); border:1px solid rgba(255,255,255,.1); border-radius:10px; overflow:hidden; }
+  .sheet-col { display:flex; flex-direction:column; }
+  .sheet-col:not(:last-child) { border-right:1px solid rgba(255,255,255,.08); }
+  .sheet-row { display:flex; align-items:center; justify-content:space-between; padding:7px 12px; border-bottom:1px solid rgba(255,255,255,.05); font-size:15px; font-weight:600; }
+  .sheet-row:last-child { border-bottom:none; }
+  .sheet-mark { font-size:14px; font-weight:800; flex-shrink:0; }
+  .sheet-mark.tick { color:var(--green); }
+  .sheet-mark.cross { color:var(--red); }
+
+  .btn-row { display:flex; gap:10px; }
+  .btn-sm {
+    padding:14px 18px; background:var(--surface2); color:var(--muted);
+    font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:700;
+    border:1px solid var(--border); border-radius:14px; cursor:pointer;
+    transition:color .2s, border-color .2s;
+  }
+  .btn-sm:hover { color:var(--text); border-color:rgba(255,255,255,.2); }
+  .btn-sm.primary {
+    flex:1; background:var(--accent2); color:#fff; border:none;
+    box-shadow:0 6px 24px rgba(255,101,132,.35);
+  }
+  .btn-sm.primary:hover { transform:translateY(-2px); box-shadow:0 10px 32px rgba(255,101,132,.5); }
+
+  /* ── RECORDS ── */
+  #recordsScreen {
+    min-height:100vh; align-items:flex-start; justify-content:center;
+    overflow-y:auto; padding:24px 0; position:relative;
+  }
+  .dash-inner { position:relative; z-index:1; width:92%; max-width:600px; margin:auto; animation:fadeUp .4s ease; }
+  .dash-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+  .dash-title { font-size:22px; font-weight:800; }
+  .dash-count { font-size:13px; color:var(--muted); }
+
+  .record-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:20px;
+    padding:18px 20px; margin-bottom:12px; cursor:pointer;
+    transition:border-color .2s, transform .15s; text-align:left;
+  }
+  .record-card:hover { border-color:rgba(255,101,132,.3); transform:translateY(-2px); }
+  .rc-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .rc-name { font-size:17px; font-weight:800; }
+  .rc-date { font-size:12px; color:var(--muted); }
+  .rc-score { font-size:28px; font-weight:800; }
+  .rc-bar-wrap { height:6px; background:var(--surface2); border-radius:100px; overflow:hidden; margin-bottom:8px; }
+  .rc-bar-fill { height:100%; border-radius:100px; }
+  .rc-bottom { display:flex; gap:16px; align-items:center; }
+  .rc-stat { font-size:12px; color:var(--muted); }
+  .rc-stat span { font-weight:700; color:var(--text); }
+  .detail-wrap { background:var(--surface2); border-radius:14px; padding:14px; margin-top:12px; display:none; }
+  .detail-wrap.open { display:block; }
+
+  .empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+  .empty-icon { font-size:48px; margin-bottom:12px; }
+  .empty-text { font-size:15px; }
+
+  .btn-danger {
+    margin-left:auto; padding:8px 14px; background:rgba(255,91,122,.1);
+    border:1px solid rgba(255,91,122,.25); color:var(--red);
+    font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:600;
+    border-radius:10px; cursor:pointer; transition:background .2s;
+  }
+  .btn-danger:hover { background:rgba(255,91,122,.2); }
+</style>
+</head>
+<body>
+<div class="app-bg"></div>
+
+<!-- ── START ── -->
+<div id="startScreen" class="screen active">
+  <div class="card">
+    <div class="badge"><span class="dot"></span> &nbsp;Sight Word Test</div>
+    <div class="big-title">Word<br>Test</div>
+    <p class="sub">All 50 words in order.<br>Tap ✓ or ✗ as the student reads aloud.</p>
+    <div class="chips">
+      <span class="chip">50 words</span>
+      <span class="chip">No timer</span>
+      <span class="chip">Set order</span>
+    </div>
+    <label class="lbl" for="nameInput">Student's name</label>
+    <input class="name-input" id="nameInput" type="text" placeholder="e.g. Sarah" autocomplete="off">
+    <button class="btn-primary" id="btnStart" disabled onclick="startGame()">Begin Test →</button>
+    <button class="btn-ghost" onclick="showRecords()" id="btnRecords">📋 View Records</button>
+  </div>
+</div>
+
+<!-- ── GAME ── -->
+<div id="gameScreen" class="screen">
+  <div class="game-wrap">
+    <div class="game-header">
+      <div class="name-tag">Testing: <span id="nameDisplay">—</span></div>
+      <div class="prog-tag"><span id="wordIndex">1</span> / 50</div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-pill">
+        <div class="lbl2">Correct</div>
+        <div class="val val-c" id="correctCount">0</div>
+      </div>
+      <div class="stat-pill">
+        <div class="lbl2">Missed</div>
+        <div class="val val-m" id="missedCount">0</div>
+      </div>
+    </div>
+    <div class="prog-bar-wrap">
+      <div class="prog-bar-fill" id="progressBar" style="width:0%"></div>
+    </div>
+    <div class="word-card">
+      <div class="flash-overlay" id="flashOverlay"></div>
+      <div class="word-display word-in" id="wordDisplay">—</div>
+    </div>
+    <div class="action-row">
+      <button class="btn-act btn-ok" id="btnOk" onclick="doMark(true)">✓</button>
+      <button class="btn-act btn-no" id="btnNo" onclick="doMark(false)">✗</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESULTS ── -->
+<div id="resultsScreen" class="screen">
+  <div class="results-card">
+    <div class="r-emoji" id="rEmoji">🎉</div>
+    <div class="r-name" id="rName">—</div>
+    <div class="r-title" id="rTitle">Great work!</div>
+    <div class="r-sub">Sight word test complete</div>
+    <div class="score-big" id="rScore">—</div>
+    <div class="score-lbl">% of words read correctly</div>
+    <div class="res-grid">
+      <div class="res-box"><div class="rl">Total</div><div class="rv">50</div></div>
+      <div class="res-box"><div class="rl">Correct</div><div class="rv" style="color:var(--green)" id="rCorrect">0</div></div>
+      <div class="res-box"><div class="rl">Missed</div><div class="rv" style="color:var(--red)" id="rMissed">0</div></div>
+    </div>
+    <div class="breakdown">
+      <div class="bd-title">Word breakdown</div>
+      <div id="sheetTableResult"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-sm" onclick="showRecords()">📋 Records</button>
+      <button class="btn-sm primary" onclick="goHome()">New Test →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RECORDS ── -->
+<div id="recordsScreen" class="screen">
+  <div class="dash-inner">
+    <div class="dash-header">
+      <div>
+        <div class="dash-title">📋 Records</div>
+        <div class="dash-count" id="recordCount">0 tests saved</div>
+      </div>
+      <button class="btn-sm" onclick="goHome()">← Back</button>
+    </div>
+    <div id="recordsList"></div>
+  </div>
+</div>
+
+<script>
+  const WORDS = [
+    "of","the","had","a","to","is","not","you","all","it","he","we","for","on","be","do","from",
+    "or","one","and","by","in","but","that","what","were","when","was","your","can","are","this","how","their",
+    "said","as","there","use","with","his","they","each","an","I","at","she","which","words","if","have"
+  ];
+  const COL1 = WORDS.slice(0,17);
+  const COL2 = WORDS.slice(17,34);
+  const COL3 = WORDS.slice(34,50);
+  const STORAGE_KEY = "sight-word-records";
+
+  let studentName = "";
+  let wordIndex = 0;
+  let results = [];
+  let finishing = false;
+  let records = [];
+
+  // ── Storage ──
+  function loadRecords() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+  function saveRecords() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }
+
+  // ── Screens ──
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ── Start ──
+  records = loadRecords();
+  updateRecordBtn();
+
+  document.getElementById('nameInput').addEventListener('input', function() {
+    document.getElementById('btnStart').disabled = !this.value.trim();
+  });
+  document.getElementById('nameInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && this.value.trim()) startGame();
+  });
+
+  function updateRecordBtn() {
+    const btn = document.getElementById('btnRecords');
+    if (btn) btn.textContent = `📋 View Records${records.length > 0 ? ' (' + records.length + ')' : ''}`;
+  }
+
+  function goHome() {
+    document.getElementById('nameInput').value = '';
+    document.getElementById('btnStart').disabled = true;
+    updateRecordBtn();
+    show('startScreen');
+  }
+
+  // ── Game ──
+  function startGame() {
+    studentName = document.getElementById('nameInput').value.trim();
+    wordIndex = 0;
+    results = [];
+    finishing = false;
+    document.getElementById('nameDisplay').textContent = studentName;
+    document.getElementById('correctCount').textContent = '0';
+    document.getElementById('missedCount').textContent = '0';
+    document.getElementById('progressBar').style.width = '0%';
+    document.getElementById('btnOk').disabled = false;
+    document.getElementById('btnNo').disabled = false;
+    show('gameScreen');
+    renderWord();
+  }
+
+  function renderWord() {
+    const el = document.getElementById('wordDisplay');
+    el.classList.remove('word-in');
+    void el.offsetWidth;
+    el.classList.add('word-in');
+    el.textContent = WORDS[wordIndex];
+    document.getElementById('wordIndex').textContent = wordIndex + 1;
+    document.getElementById('progressBar').style.width = (wordIndex / WORDS.length * 100) + '%';
+  }
+
+  function flash(type) {
+    const o = document.getElementById('flashOverlay');
+    o.className = 'flash-overlay';
+    void o.offsetWidth;
+    o.className = 'flash-overlay ' + (type === 'green' ? 'flash-green' : 'flash-red');
+  }
+
+  function doMark(correct) {
+    if (finishing) return;
+    results.push({ word: WORDS[wordIndex], correct });
+    const correctCount = results.filter(r => r.correct).length;
+    const missedCount  = results.filter(r => !r.correct).length;
+    document.getElementById('correctCount').textContent = correctCount;
+    document.getElementById('missedCount').textContent  = missedCount;
+    flash(correct ? 'green' : 'red');
+    wordIndex++;
+    if (wordIndex >= WORDS.length) {
+      finishing = true;
+      document.getElementById('btnOk').disabled = true;
+      document.getElementById('btnNo').disabled = true;
+      setTimeout(endGame, 350);
+    } else {
+      renderWord();
+    }
+  }
+
+  function endGame() {
+    const correct = results.filter(r => r.correct).length;
+    const score = Math.round((correct / WORDS.length) * 100);
+    const record = { id: Date.now(), name: studentName, date: Date.now(), correct, total: WORDS.length, score, results: [...results] };
+    records.unshift(record);
+    saveRecords();
+
+    // populate results screen
+    const g = grade(score);
+    document.getElementById('rEmoji').textContent  = g.emoji;
+    document.getElementById('rTitle').textContent  = g.label;
+    document.getElementById('rName').textContent   = studentName.toUpperCase();
+    document.getElementById('rScore').textContent  = score + '%';
+    document.getElementById('rCorrect').textContent = correct;
+    document.getElementById('rMissed').textContent  = WORDS.length - correct;
+    document.getElementById('sheetTableResult').innerHTML = buildSheetTable(results);
+    show('resultsScreen');
+  }
+
+  // ── Records ──
+  function showRecords() {
+    const list = document.getElementById('recordsList');
+    document.getElementById('recordCount').textContent = records.length + ' test' + (records.length !== 1 ? 's' : '') + ' saved';
+    if (records.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No records yet.<br>Complete a test to see results here.</div></div>';
+    } else {
+      list.innerHTML = records.map((rec, idx) => {
+        const g = grade(rec.score);
+        const bc = barColor(rec.score);
+        return `
+          <div class="record-card" onclick="toggleDetail(${idx})">
+            <div class="rc-top">
+              <div><div class="rc-name">${g.emoji} ${rec.name}</div><div class="rc-date">${formatDate(rec.date)}</div></div>
+              <div class="rc-score" style="color:${bc}">${rec.score}%</div>
+            </div>
+            <div class="rc-bar-wrap"><div class="rc-bar-fill" style="width:${rec.score}%;background:${bc}"></div></div>
+            <div class="rc-bottom">
+              <div class="rc-stat">Correct: <span style="color:var(--green)">${rec.correct}</span></div>
+              <div class="rc-stat">Missed: <span style="color:var(--red)">${rec.total - rec.correct}</span></div>
+              <div class="rc-stat">Total: <span>${rec.total}</span></div>
+              <button class="btn-danger" onclick="deleteRecord(event,${idx})">Delete</button>
+            </div>
+            <div class="detail-wrap" id="detail-${idx}">
+              <div class="bd-title" style="font-size:11px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.08em">Word breakdown</div>
+              ${buildSheetTable(rec.results)}
+            </div>
+          </div>`;
+      }).join('');
+    }
+    show('recordsScreen');
+  }
+
+  function toggleDetail(idx) {
+    const d = document.getElementById('detail-' + idx);
+    if (d) d.classList.toggle('open');
+  }
+
+  function deleteRecord(e, idx) {
+    e.stopPropagation();
+    if (!confirm('Delete this record?')) return;
+    records.splice(idx, 1);
+    saveRecords();
+    showRecords();
+  }
+
+  // ── Sheet table builder ──
+  function buildSheetTable(res) {
+    const lookup = {};
+    res.forEach(r => { lookup[r.word] = r.correct; });
+    const cols = [COL1, COL2, COL3];
+    const colsHtml = cols.map(col => {
+      const rows = col.map(word => {
+        const correct = lookup[word];
+        const markClass = correct ? 'tick' : 'cross';
+        const mark = correct ? '✓' : '✗';
+        return `<div class="sheet-row"><span>${word}</span><span class="sheet-mark ${markClass}">${mark}</span></div>`;
+      }).join('');
+      return `<div class="sheet-col">${rows}</div>`;
+    }).join('');
+    return `<div class="sheet-table">${colsHtml}</div>`;
+  }
+
+  // ── Helpers ──
+  function grade(p) {
+    if (p >= 90) return { emoji: '🌟', label: 'Outstanding!' };
+    if (p >= 75) return { emoji: '🎉', label: 'Great work!' };
+    if (p >= 50) return { emoji: '👍', label: 'Good effort!' };
+    return { emoji: '💪', label: 'Keep practising!' };
+  }
+  function barColor(s) {
+    return s >= 90 ? 'var(--green)' : s >= 60 ? 'var(--accent)' : 'var(--red)';
+  }
+  function formatDate(ts) {
+    return new Date(ts).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+  }
+
+  // ── Keyboard shortcuts ──
+  document.addEventListener('keydown', e => {
+    if (!document.getElementById('gameScreen').classList.contains('active')) return;
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); doMark(true); }
+    if (e.key === 'ArrowLeft'  || e.key === 'Backspace') { e.preventDefault(); doMark(false); }
+  });
+</script>
+</body>
+</html>
