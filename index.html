@@ -125,7 +125,7 @@
     content:''; position:absolute; inset:0;
     background:radial-gradient(ellipse 80% 60% at 50% 30%,rgba(255,101,132,.05) 0%,transparent 70%);
   }
-  .word-display { font-size:clamp(64px,14vw,100px); font-weight:800; letter-spacing:-.02em; position:relative; z-index:1; }
+  .word-display { font-size:clamp(38px,10vw,74px); font-weight:800; letter-spacing:-.02em; position:relative; z-index:1; text-align:center; padding:0 12px; max-width:100%; overflow-wrap:anywhere; }
   .word-in { animation:wordIn .25s cubic-bezier(.34,1.56,.64,1); }
   @keyframes wordIn { from{opacity:0;transform:scale(.8) translateY(10px)} to{opacity:1;transform:none} }
 
@@ -336,9 +336,9 @@
 
 <script>
   const WORDS = [
-    "of","the","had","a","to","is","not","you","all","it","he","we","for","on","be","do","from",
-    "or","one","and","by","in","but","that","what","were","when","was","your","can","are","this","how","their",
-    "said","as","there","use","with","his","they","each","an","I","at","she","which","words","if","have"
+    "ran","train","flying","flowers","crane","bridge","house","tub","big","roll","leap","roar","noise","swing","stick","back","yellow",
+    "fire","vintage","car","town","late","hive","fine","sneezed","snapped","ants","bug","tea","open","sweet","pie","as","be",
+    "come","or","your","out","so","will","crawling","zoomed","giant","get","bread","found","with","butter","honey","some"
   ];
   const COL1 = WORDS.slice(0,17);
   const COL2 = WORDS.slice(17,34);
@@ -510,7 +510,9 @@
   function buildSheetTable(res) {
     const lookup = {};
     res.forEach(r => { lookup[r.word] = r.correct; });
-    const cols = [COL1, COL2, COL3];
+    // Use each record's original word order so older tests still show the correct words.
+    const words = res.map(r => r.word);
+    const cols = [words.slice(0,17), words.slice(17,34), words.slice(34,50)];
     const colsHtml = cols.map(col => {
       const rows = col.map(word => {
         const correct = lookup[word];
